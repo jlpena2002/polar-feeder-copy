@@ -1,3 +1,11 @@
+"""
+YOLO detection helper for the Polar Feeder project.
+
+This module provides utilities for running a YOLOv8 model in BLE test and
+manual detection workflows. It also includes a threaded PiCamera grabber that
+keeps the latest frame hot without blocking the main loop.
+"""
+
 import os
 import sys
 import argparse
@@ -70,7 +78,14 @@ def detect_frame(frame):
 # blocks waiting on the camera sensor. The background thread always
 # keeps the latest frame hot.
 class PiCameraGrabber:
+    """Threaded PiCamera grabber to keep the latest frame available.
+
+    This helper runs a background thread that continuously captures camera
+    frames and maintains the latest decoded BGR image for non-blocking access.
+    """
+
     def __init__(self, cap):
+        """Create the grabber and start the background capture thread."""
         self.cap = cap
         self._frame = None
         self._lock = threading.Lock()
@@ -79,6 +94,7 @@ class PiCameraGrabber:
         self._thread.start()
 
     def _run(self):
+        """Continuously capture frames until the grabber is stopped."""
         while not self._stop.is_set():
             frame_bgra = self.cap.capture_array()
             frame = cv2.cvtColor(np.copy(frame_bgra), cv2.COLOR_BGRA2BGR)
@@ -86,10 +102,12 @@ class PiCameraGrabber:
                 self._frame = frame
 
     def get(self):
+        """Return the most recent captured frame, or None if no frame is ready."""
         with self._lock:
             return self._frame
 
     def stop(self):
+        """Stop the background capture thread and wait for it to terminate."""
         self._stop.set()
         self._thread.join(timeout=1.0)
 

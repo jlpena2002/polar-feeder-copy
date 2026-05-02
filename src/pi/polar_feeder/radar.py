@@ -209,8 +209,6 @@ class RadarReader:
                 if not line:
                     continue
 
-                print(f"[RADAR RAW] {line!r}", flush=True)
-
                 # Skip fragments — valid lines always contain 'bin=' and 'dist='
                 if "bin=" not in line or "dist=" not in line:
                     continue

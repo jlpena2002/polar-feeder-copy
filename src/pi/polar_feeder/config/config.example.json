@@ -1,3 +1,5 @@
+# Example configuration for the Polar Feeder project. Copy this file to `config.json` onto the Raspberry Pi and edit the values as needed before running the feeder. The config is organized into sections for each subsystem, with comments explaining the purpose of each parameter. 
+#These values were used during Demo Day and are a good starting point for testing, but feel free to adjust them based on your specific setup and requirements. Make sure to keep the JSON format valid when editing the file.
 {
   "lure": {
     "motion_threshold": 30.0,

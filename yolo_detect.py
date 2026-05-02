@@ -1,3 +1,12 @@
+#ORIGINAL yolo_detect.py file! Can be used for debug purposes and testing models
+"""
+Original YOLO Detection Script for Polar Feeder
+
+This is the archived original version of yolo_detect.py.
+It can be used for debugging purposes and testing different YOLO models.
+Contains standalone YOLO inference code without integration to the main feeder system.
+"""
+
 import os
 import sys
 import argparse

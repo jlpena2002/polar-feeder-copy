@@ -1,108 +1,99 @@
 # Polar Feeder Raspberry Pi 5 Quick Start / Validation Guide
 
-This document captures the complete instructions from the previous summary, with exact usage commands and test flows for Raspberry Pi 5 in a Python virtual environment.
+This guide describes Raspberry Pi 5 deployment and verification for the Polar Feeder.
+It focuses on the run scripts, dependency checks, BLE validation, and branch references.
 
-## 1) Purpose
+## Purpose
 
-- Rapidly verify environment and hardware readiness for Polar Feeder on Raspberry Pi 5
-- Explain all `run.sh` script variants and why both exist
-- Explain dependency on `lgpio` and how to install if needed
-- Provide comprehensive command list for testing modes and features
+- Verify Raspberry Pi 5 software and hardware readiness
+- Explain runtime launcher options
+- Document `lgpio` and BLE dependencies
+- Provide exact BLE and demo commands for verification
+- Record the main branch naming conventions used by this repo
 
-## 2) `run.sh` variants (why both exist)
+## Branches
 
-### 2.1 Root-level `run.sh`
+Use these branches for repository expectations:
 
-- Location: `./run.sh` (repo root)
-- Purpose: quick local dev execution
-- Behavior:
-  - `set -e`
-  - `cd` to project root
-  - activate `.venv`
-  - set `PYTHONPATH=$PWD/src/pi`
-  - run `python -m polar_feeder.main "$@"`
-- Use when you want a compact launcher for manual tests.
+- `main` — clean documented final submission code
+- `develop` — active development branch going forward
+- `zoo-visit` — snapshot from the zoo deployment, kept for reference
+- `archive/yolo-original` — archived original YOLO implementation and `yolo_detect.py`
 
-### 2.2 `src/pi/scripts/run.sh`
+## Run Script Variants
+
+### `./run.sh`
+
+- Location: repository root
+- Use for quick local development and manual testing
+- Activates `.venv` and runs `python -m polar_feeder.main`
+- Good for interactive checks
+
+### `src/pi/scripts/run.sh`
 
 - Location: `src/pi/scripts/run.sh`
-- Purpose: recommended service startup (systemd, robust production run)
-- Behavior:
-  - `set -euo pipefail` (strict)
-  - compute `REPO_ROOT` reliably
-  - check `VENV_PY` exists and is executable
-  - sets `PYTHONPATH=REPO_ROOT/src/pi`
-  - sets `PYTHONUNBUFFERED=1`
-  - execs `VENV_PY -m polar_feeder.main "$@"`
-- Use for systemd-run, automation, and non-interactive deployment.
+- Recommended for service deployment and more robust execution
+- Uses strict shell error handling and a verified Python interpreter
+- Recommended for systemd or unattended runs
 
-### 2.3 systemd service launcher
+### systemd service
 
-- file: `deploy/systemd/polar-feeder.service`
-- calls `src/pi/scripts/run.sh --ble-test --config /etc/polar_feeder/config.json`
-- includes pre-start GPIO init and restarts on failure.
+- File: `deploy/systemd/polar-feeder.service`
+- Wraps `src/pi/scripts/run.sh`
+- Useful for boot startup and service recovery
 
-## 3) `lgpio` dependency
+## Required Dependencies
 
-- `lgpio` is the GPIO library used by:
-  - `src/pi/polar_feeder/transmittingfunc.py`
-  - `src/pi/polar_feeder/receivingsave.py`
-- Typical install on Raspbian/RPi OS:
-  - `sudo apt install python3-lgpio` or `pip install lgpio`
-- The repository may include a `lgpio/` directory as a placeholder or vendored module.
-- If it’s empty, the runtime will use installed system package.
+Install on Raspberry Pi 5:
 
-## 4) Documentation coverage (files created in the project)
+- `python3`
+- `python3-venv`
+- `python3-pip`
+- `python3-lgpio` or `pip install lgpio`
+- `bluez`
+- `libcamera` / `picamera2`
+- `v4l-utils`
+- `systemd`
 
-- `DOCUMENTATION_INDEX.md` - master navigation
-- `CODEBASE_DOCUMENTATION.md` - complete architecture and module details
-- `CONFIG_GUIDE.md` - config keys/ranges and examples
-- `QUICK_REFERENCE.md` - fast lookup table and command cheat sheet
-- `RF_SIGNALS_README.md` - RF recording/transmit format details
-- `DOCUMENTATION_SUMMARY.md` - status and checklist metrics
-- `README_DOCUMENTATION.md` - final completion summary
-- `docs/RPI5_QUICK_START.md` - this file (Pi-specific quick start)
-
-## 5) Setup and run commands (Raspberry Pi 5, terminal, virtualenv)
-
-### 5.1 Create virtual environment
+## Base Setup
 
 ```bash
-cd ~/OneDrive/Desktop/polar-feeder
+cd c:/Users/Jeremy/SD2025-36-Arctic-Project
 python3 -m venv .venv
-source .venv/bin/activate
+.venv\Scripts\activate
 pip install -r requirements.txt
 ```
 
-### 5.2 Run app (local dev)
+> On PowerShell use `.venv\Scripts\Activate.ps1` instead of `activate`.
+
+## Hardware Notes
+
+- Radar is connected over UART at `115200` baud.
+- Radar port is configured in `config/config.example.json` under `radar.port`.
+- RF actuator uses `GPIO17`.
+- BLE uses the Nordic UART Service via `bluezero`.
+
+## Run the App
+
+### BLE test mode
 
 ```bash
-./run.sh --ble-test --config config/config.example.json
+python src/pi/polar_feeder/main.py --ble-test --config config/config.example.json
 ```
 
-### 5.3 Run app (robust script)
+### Demo mode
+
+```bash
+python src/pi/polar_feeder/main.py --config config/config.example.json --demo-seconds 60
+```
+
+### Robust launch
 
 ```bash
 src/pi/scripts/run.sh --ble-test --config config/config.example.json
 ```
 
-### 5.4 Run as systemd service
-
-```bash
-sudo cp deploy/systemd/polar-feeder.service /etc/systemd/system/
-sudo systemctl daemon-reload
-sudo systemctl enable polar-feeder
-sudo systemctl start polar-feeder
-sudo journalctl -u polar-feeder -f
-```
-
-### 5.5 Run self-test utility
-
-```bash
-python tools/selftest.py
-```
-
-### 5.6 Verify configuration loader (quick check)
+## Verify Configuration Loading
 
 ```bash
 python - <<'PY'
@@ -112,85 +103,88 @@ print(cfg)
 PY
 ```
 
-### 5.7 Inspect logs
+## Self-Test Utility
+
+```bash
+python tools/selftest.py
+```
+
+## Inspect Logs
 
 ```bash
 tail -f logs/*.csv
-``` 
+```
 
-## 6) Specific testing commands for each feature
+## BLE Command Validation
 
-### 6.1 BLE command test (via motorcycle / mobile app or BLE tool)
+Use a BLE terminal or app while `--ble-test` is running:
 
-Common command examples:
-- `enable`
-- `disable`
-- `standby`
-- `lure`
-- `retract`
-- `status`
-- `health`
-- `version`
+- `ENABLE=1`
+- `ENABLE=0`
+- `MODE=LURE`
+- `MODE=INVERSE`
+- `SET rd=1500`
+- `SET mt=25`
+- `SET detect_dist=3.0`
+- `STATUS`
+- `ACTUATOR=RETRACT`
 
-Expected: Main logs show event rows and telemetry rows in CSV.
+Confirm the device responds with `ACK` or valid status output.
 
-### 6.2 Radar sensor test
+## Radar and Vision Validation
 
-- Ensure `radar.enabled=true` in config
-- Ensure radar sensor connected on serial port configured in `radar.port`
-- Confirm `/dev/serial0` (or configured port) exists.
-- Check `tools/selftest.py` output for serial node list.
+1. Set `radar.enabled=true`.
+2. Confirm the serial device exists for `radar.port`.
+3. Confirm the camera is available and `vision.enabled=true`.
+4. Start BLE test mode and verify radar and vision data appear in logs.
 
-### 6.3 Actuator RF test
+## Actuator Validation
 
-- enable mode
-- send `extend` then `retract` commands
-- confirm `transmittingfunc` executed and `logs/*.csv` records events.
+1. Start BLE test mode.
+2. Send `ACTUATOR=EXTEND`.
+3. Send `ACTUATOR=RETRACT`.
+4. Confirm `logs/*.csv` includes actuator events.
 
-### 6.4 Safety test
+## Safety Validation
 
-- `ble_disconnect_safe_idle: true` in config
-- Mo simulate BLE disconnect and see state change to IDLE via logs
+1. Set `safety.ble_disconnect_safe_idle=true`.
+2. Start BLE test mode.
+3. Stop BLE traffic and verify the system returns to safe idle after a timeout.
 
-## 7) Where to read each existing doc quickly
+## Troubleshooting
 
-- If you need architecture + flow: `CODEBASE_DOCUMENTATION.md`.
-- If you need config parameters: `CONFIG_GUIDE.md`.
-- If you need quick commands / FSM and behavior: `QUICK_REFERENCE.md`.
-- If you need RF signal details: `RF_SIGNALS_README.md`.
-- If you need verification status and coverage: `DOCUMENTATION_SUMMARY.md`.
-- If you need overall index & next steps: `DOCUMENTATION_INDEX.md`.
+- BLE not advertising: ensure Bluetooth is enabled and the device is in BLE test mode.
+- `lgpio` import failing: install the package via apt or pip.
+- Radar port missing: update `radar.port` to the correct device.
+- Actuator not responding: verify RF wiring and GPIO access.
+- Camera issues: install `libcamera` and camera drivers.
 
-## 8) Custom “Pi 5 interactive checklist”
+## Reference Docs
 
-1. Confirm dependencies:
-   - `python3`, `pip`, `venv`, `lgpio`, `bluez`, `systemd`, `libcamera`, `v4l-utils`
-2. Confirm hardware revisions:
-   - Radar connected at the correct UART port
-   - RF transmitter pins wired to gpio17/gpio27 (or adjust in code)
-3. Confirm service user has needed permissions:
-   - sudo user or `arcticproject` has access to `/dev/gpiomem`, `/dev/tty*`, `bluetooth`
-4. Run `tools/selftest.py`, fix missing pieces.
-5. Run with `src/pi/scripts/run.sh` and inspect `journalctl` or `tail -f logs/*.csv`.
-6. Send BLE commands and validate state machine transitions.
+- Architecture and design: `CODEBASE_DOCUMENTATION.md`
+- Configuration details: `CONFIG_GUIDE.md`
+- Quick commands: `QUICK_REFERENCE.md`
+- RF signal details: `config/RF_SIGNALS_README.md`
+- Documentation coverage: `DOCUMENTATION_SUMMARY.md`
+- Navigation index: `DOCUMENTATION_INDEX.md`
 
----
+## Branch Reference
 
-# Cleaner Copy for quick reference at shell
+- `main` — final submission code
+- `develop` — active development branch
+- `zoo-visit` — zoo reference snapshot
+- `archive/yolo-original` — legacy YOLO implementation
+
+## Quick Shell Copy
 
 ```bash
-cd ~/OneDrive/Desktop/polar-feeder
-source .venv/bin/activate
-./run.sh --ble-test --config config/config.example.json
-# OR robust method
+cd c:/Users/Jeremy/SD2025-36-Arctic-Project
+.venv\Scripts\activate
+python src/pi/polar_feeder/main.py --ble-test --config config/config.example.json
+# OR
 src/pi/scripts/run.sh --ble-test --config config/config.example.json
 # watch logs
 tail -f logs/*.csv
 # self-test
 python tools/selftest.py
-# config parse sanity
-python - <<'PY'
-from polar_feeder.config.loader import load_config
-print(load_config('config/config.example.json'))
-PY
 ```

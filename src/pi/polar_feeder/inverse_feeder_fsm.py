@@ -164,13 +164,6 @@ class InverseFeederFSM:
                     print("[INVERSE FSM] Bear still — started timer", flush=True)
 
                 elapsed = now - self._still_since
-                print(
-                    f"[INVERSE FSM] WATCHING still={elapsed:.1f}s"
-                    f" / {self.min_still_duration_s:.1f}s needed"
-                    f" motion={motion:.1f}",
-                    flush=True,
-                )
-
                 if elapsed >= self.min_still_duration_s:
                     self.actuator.extend()
                     self._dispensing = True
@@ -205,15 +198,6 @@ class InverseFeederFSM:
                     self._dispensing_since = now
                 elapsed = now - self._dispensing_since
 
-                print(
-                    f"[INVERSE FSM] DISPENSING still={elapsed:.1f}s"
-                    f" / {self.reward_hold_s:.1f}s to REWARDING"
-                    f" motion={motion:.1f}"
-                    f" close={bear_is_close}"
-                    f" radar={radar_distance_m}",
-                    flush=True,
-                )
-
                 if elapsed >= self.reward_hold_s and bear_is_close:
                     self._set_state(InverseState.REWARDING)
                     print("[INVERSE FSM] DISPENSING -> REWARDING (still + close)", flush=True)
@@ -221,12 +205,6 @@ class InverseFeederFSM:
                     # Still held long enough but not close — stay in DISPENSING, reset timer
                     # so bear has to re-earn it once it approaches
                     self._dispensing_since = now
-                    print(
-                        f"[INVERSE FSM] DISPENSING hold met but bear too far"
-                        f" ({radar_distance_m}m > {self.feeding_distance_m}m)"
-                        f" — resetting timer",
-                        flush=True,
-                    )
             else:
                 reason = "moved" if bear_detected else "left frame"
                 print(
@@ -241,7 +219,6 @@ class InverseFeederFSM:
             return
         if self.state == InverseState.REWARDING:
             # Arm stays extended indefinitely — only manual_retract() exits
-            print("[INVERSE FSM] REWARDING — holding extended, awaiting manual retract", flush=True)
             return
 
         # COOLDOWN: wait before watching again

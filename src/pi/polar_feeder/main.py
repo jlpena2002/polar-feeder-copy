@@ -1,18 +1,16 @@
 """
-Main Entry Point for Polar Feeder Controller
+Polar Feeder main application entry point.
 
-Supports two modes:
+This module orchestrates hardware and software components for the zoo polar bear
+feeder. It supports both BLE-driven operation and an offline demo mode.
 
-1. BLE Mode (--ble-test):
-   - Starts a BLE GATT server for remote control via Android app
-   - On ENABLE=1: starts camera thread running YOLO + FSM
-   - On ENABLE=0: stops camera thread cleanly
-   - Logs all events and telemetry to CSV
-   - Supports MODE=LURE and MODE=INVERSE via BLE command
-
-2. DEMO Mode (default):
-   - Simulated feeder with random stillness data
-   - Tests CSV logging without hardware
+Responsibilities:
+- load and validate JSON configuration
+- initialize BLE server, radar reader, vision tracker, and actuator
+- manage camera thread lifecycle and runtime state
+- hot-swap FSM modes between LURE and INVERSE
+- log events and telemetry to per-session CSV files
+- keep the main control loop running at 20 Hz
 """
 import argparse
 import random
@@ -32,12 +30,22 @@ from polar_feeder.vision import VisionTracker, SensorFusion
 
 
 def make_session_id() -> str:
+    """Generate a compact session identifier for per-run logging.
+
+    The identifier is UTC timestamped and includes a short random suffix to
+    ensure uniqueness across repeated sessions.
+    """
     ts = datetime.now(UTC).strftime("%Y%m%dT%H%M%SZ")
     short = uuid.uuid4().hex[:8]
     return f"{ts}_{short}"
 
 
 def main() -> int:
+    """Run the Polar Feeder application.
+
+    Returns:
+        Exit code: 0 on success, non-zero on failure.
+    """
     # ===== ARGUMENT PARSING =====
     parser = argparse.ArgumentParser(description="Polar feeder controller.")
     parser.add_argument("--config", default="config/config.example.json", help="Path to JSON config.")
@@ -303,17 +311,18 @@ def main() -> int:
 
                     new_state = fsm.state.name
 
-                    print(
-                        f"[CAMERA] frame={frame_index} objects={obj_count} "
-                        f"motion={motion:.1f} vision_threat={is_vision_threat} "
-                        f"radar_threat={is_radar_threat} radar_dist={radar_str} "
-                        f"mode={runtime['fsm_mode']} fsm={new_state} "
-                        f"override={int(override_active)}",
-                        flush=True,
-                    )
+                    if frame_index % 20 == 0:
+                        print(
+                            f"[CAMERA] frame={frame_index} objects={obj_count} "
+                            f"motion={motion:.1f} vision_threat={is_vision_threat} "
+                            f"radar_threat={is_radar_threat} radar_dist={radar_str} "
+                            f"mode={runtime['fsm_mode']} fsm={new_state} "
+                            f"override={int(override_active)}",
+                            flush=True,
+                        )
 
-                    if obj_count > 0:
-                        print(f"[CAMERA] detection_time={dtimeend - dtimestart:.4f}s", flush=True)
+                        if obj_count > 0:
+                            print(f"[CAMERA] detection_time={dtimeend - dtimestart:.4f}s", flush=True)
 
                     if new_state != prev_state:
                         print(f"[FSM] {prev_state} -> {new_state}", flush=True)
@@ -564,7 +573,6 @@ def main() -> int:
             # rd/retract_delay_ms is LURE-only.
             if s_up.startswith("SET "):
                 rest = s[4:].strip()
-                print(f"[SET DEBUG] s={s!r} rest={rest!r}", flush=True)
                 if "=" not in rest:
                     return "ERR BAD_FORMAT SET"
                 key, value = [x.strip() for x in rest.split("=", 1)]

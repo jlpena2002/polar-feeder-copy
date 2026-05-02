@@ -231,6 +231,15 @@ The Polar Feeder is an intelligent food dispensing system that uses multiple sen
 
 ---
 
+## Branch Guidance
+
+- `main` — clean documented final submission code
+- `develop` — active development branch going forward
+- `zoo-visit` — snapshot of the version run at the zoo, kept for reference
+- `archive/yolo-original` — archived original YOLO implementation and `yolo_detect.py`
+
+---
+
 ## Configuration System
 
 **Files:**
@@ -239,16 +248,18 @@ The Polar Feeder is an intelligent food dispensing system that uses multiple sen
 - `CONFIG_GUIDE.md` - Detailed explanation of settings
 
 **Main Sections:**
-1. **stillness** - Motion detection thresholds
-2. **logging** - CSV recording parameters
-3. **radar** - Sensor configuration
-4. **safety** - Safety features
-5. **actuator** - Timing parameters
+1. **lure** - LURE mode thresholds and timing
+2. **inverse** - INVERSE mode stillness and reward timing
+3. **logging** - CSV recording parameters
+4. **radar** - Sensor and threat detection settings
+5. **safety** - BLE disconnect safety behavior
+6. **actuator** - Actuator/RF timing and feeding distance
+7. **vision** - Computer vision sync and enable flag
 
 **Example:**
 ```python
 cfg = load_config("config/config.example.json")
-retract_delay = cfg.actuator.retract_delay_ms  # 2500 (ms)
+retract_delay = cfg.actuator.retract_delay_ms
 ```
 
 ---
@@ -272,28 +283,57 @@ retract_delay = cfg.actuator.retract_delay_ms  # 2500 (ms)
 
 ### Parameter Configuration
 
-**User-Configurable Parameters (Three Main Control Variables):**
+**Runtime-configurable Parameters:**
 
 1. **[DELAY]** `retract_delay_ms` - Delay from threat detection to retraction
-   - `SET retract_delay_ms=<0-3000>` - Range: 0-3000 milliseconds
-   - Example: `SET retract_delay_ms=1500` - 1.5 second delay
+   - `SET retract_delay_ms=<0-3000>` or `SET rd=<value>`
+   - Example: `SET rd=1500`
    - Response: `ACK SET retract_delay_ms=<value>`
 
 2. **[STILLNESS]** `motion_threshold` - Movement tolerance before threat
-   - `SET motion_threshold=<0-1000>` - Range: 0-1000 pixels
-   - Example: `SET motion_threshold=15` - Allow 15 pixel movement
+   - `SET motion_threshold=<0-1000>` or `SET mt=<value>`
+   - Example: `SET mt=15`
    - Response: `ACK SET motion_threshold=<value>`
    - Higher value = more movement allowed before triggering threat
 
-3. **[DISTANCE]** `detection_distance_m` - Distance to start the "game"
-   - Configuration only (requires JSON edit or config reload)
-   - Range: 0.5-50.0 meters
-   - If bear is beyond this distance, threat signals are ignored
+3. **[INVERSE]** `stillness_min_duration_s` - Required stillness duration in INVERSE mode
+   - `SET stillness_min_duration_s=<value>` or `SET sm=<value>`
+   - Example: `SET sm=1.5`
+   - Response: `ACK SET stillness_min_duration_s=<value>`
+
+4. **[BUFFER]** `noise_buffer_multiplier` - Stability buffer in INVERSE mode
+   - `SET noise_buffer=<value>`
+   - Example: `SET noise_buffer=1.5`
+
+5. **[DISTANCE]** `detection_distance_m` - Distance to start radar threat detection
+   - `SET detect_dist=<value>`
+   - Example: `SET detect_dist=3.0`
+   - Response: `ACK SET detect_dist=<value>`
+
+6. **[FEEDING]** `feeding_distance_m` - Feeding proximity threshold
+   - `SET feed_dist=<value>`
+   - Example: `SET feed_dist=0.33`
+
+7. **[RADAR]** `distance_jump_m` - Sudden movement threshold
+   - `SET djump=<value>`
+   - Example: `SET djump=0.05`
+
+8. **[RF]** `pulse_ms` - RF signal pulse duration
+   - `SET pulse_ms=<value>`
+   - Example: `SET pulse_ms=200`
+
+9. **[LOGGING]** `telemetry_hz` - CSV telemetry frequency
+   - `SET telemetry_hz=<value>`
+
+10. **[SENSORS]** `radar_enabled` / `log_enabled` / `ble_disconnect_safe_idle`
+   - `SET radar_enabled=0|1`
+   - `SET log_enabled=0|1`
+   - `SET ble_disconnect_safe_idle=0|1`
 
 **Generic Parameter Set:**
-- `SET <key>=<value>` - Set any runtime parameter
+- `SET <key>=<value>` - Set any runtime parameter supported by BLE
 - Response: `ACK SET <key>=<value>`
-- Use `STATUS` to see all current parameter values
+- Use `STATUS` to see the current runtime values
 
 ### Status Queries
 - `STATUS` - Get current feeder status

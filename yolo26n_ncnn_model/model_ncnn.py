@@ -1,3 +1,11 @@
+"""
+NCNN Model Test Inference Script
+
+This script performs a test inference on the YOLOv8 NCNN model to verify
+the model loading and execution. It generates random input and checks
+the output shape and values for correctness.
+"""
+
 import numpy as np
 import ncnn
 import torch

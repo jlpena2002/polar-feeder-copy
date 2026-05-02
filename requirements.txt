@@ -28,3 +28,5 @@ python-dotenv==1.0.1
 
 # Development / Testing (optional)
 pytest==7.4.2
+
+#forgot to add, but need to also install the dependencies for the NCNN model to work!
