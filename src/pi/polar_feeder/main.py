@@ -864,7 +864,7 @@ def main() -> int:
                         if sensor_fusion:
                             sensor_fusion.update_radar(rr.timestamp)
 
-                # Only evict if radar is allowed but going stale — not if it's intentionally gated
+                # Only evict if radar is allowed but going stale - not if it's intentionally gated
                 if radar_allowed and (time.monotonic() - last_radar_time) > RADAR_STALE_S:
                     runtime["radar_distance_m"] = None
                     radar_distance_m = None
