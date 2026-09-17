@@ -7,7 +7,7 @@ The system uses a Raspberry Pi 5 to combine camera-based object detection, 60 GH
 ## System Highlights
 
 - Raspberry Pi 5 running Embedded Linux
-- 20 Hz main control loop across 5 concurrent threads
+- 20 Hz main control loop with concurrent camera, radar, and BLE processing
 - 640x480 PiCamera2 image capture with YOLO/NCNN inference
 - Infineon BGT60TR13C 60 GHz radar over 115200-baud UART
 - Vision/radar sensor fusion and synchronization
@@ -86,7 +86,7 @@ src/pi/polar_feeder/
 
 ## Real-Time Control
 
-The system executes a 20 Hz main control loop while sensor acquisition, computer vision, BLE communication, and logging operate across five concurrent threads.
+The system executes a 20 Hz main control loop while camera processing, radar acquisition, and BLE communication run concurrently with the main control logic..
 
 Camera detections and radar measurements are synchronized within a bounded time window before being consumed by the active control state machine.
 
@@ -176,7 +176,7 @@ The BLE subsystem was hardened during field testing to handle bonding, device-ad
 
 ## Telemetry and Testing
 
-The system records 25-field CSV telemetry at 5 Hz for debugging, system verification, and parameter tuning.
+The system records 25-field CSV telemetry with configurable logging rate for system verification, control tuning, and field debugging.
 
 Logged data includes:
 
